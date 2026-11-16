@@ -1,0 +1,42 @@
+name: Build Windows EXE (x86)
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:   # кнопка ручного запуска во вкладке Actions
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python (32-bit)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          architecture: 'x86'   # 32-битный Python -> exe работает и на x86, и на x64 Windows
+
+      - name: Install dependencies
+        # только то, что реально нужно скрипту; без pandas/numpy и прочего
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller openpyxl
+
+      - name: Check Python architecture
+        run: python -c "import struct, platform; print(platform.python_version(), struct.calcsize('P')*8, 'bit')"
+
+      - name: Build EXE
+        run: >
+          pyinstaller --onefile --console --clean
+          --exclude-module numpy
+          --exclude-module pandas
+          --exclude-module tkinter
+          --name table_script
+          table_script.py
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-exe-x86
+          path: dist/table_script.exe
